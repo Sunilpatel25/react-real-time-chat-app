@@ -1,0 +1,5 @@
+{
+  "name": "React Real-Time Chat App",
+  "description": "A WhatsApp-style real-time chat application built with React and TypeScript, featuring a responsive UI, user-to-user messaging, and persistent chat history through a mock backend.",
+  "requestFramePermissions": []
+}
