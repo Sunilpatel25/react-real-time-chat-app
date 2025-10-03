@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: [
+          'react-real-time-chat-app.onrender.com',
+          '.onrender.com', // Allow all Render subdomains
+          'localhost',
+        ],
       },
       plugins: [react()],
       define: {
