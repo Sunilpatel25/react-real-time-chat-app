@@ -40,7 +40,10 @@ router.post('/register', async (req, res) => {
         });
 
         const savedUser = await newUser.save();
-        const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        const token = jwt.sign({ 
+            id: savedUser._id, 
+            role: savedUser.role || 'user' 
+        }, process.env.JWT_SECRET, { expiresIn: '3d' });
         
         res.status(201).json({ user: savedUser.toJSON(), token });
     } catch (err) {
@@ -61,7 +64,10 @@ router.post('/login', async (req, res) => {
         // const validPass = await bcrypt.compare(req.body.password, user.password);
         // if (!validPass) return res.status(400).json({ message: 'Invalid password' });
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        const token = jwt.sign({ 
+            id: user._id, 
+            role: user.role || 'user' 
+        }, process.env.JWT_SECRET, { expiresIn: '3d' });
         
         res.status(200).json({ user: user.toJSON(), token });
     } catch (err) {

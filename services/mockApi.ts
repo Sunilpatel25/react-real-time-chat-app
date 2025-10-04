@@ -95,3 +95,8 @@ export const markMessagesAsRead = (conversationId: string): Promise<{ success: b
         body: JSON.stringify({ conversationId })
     })
 }
+
+// Admin-only: Get all users
+export const getAllUsers = (): Promise<User[]> => {
+    return apiFetch('/users');
+};

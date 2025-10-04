@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, Conversation, Message } from './types';
+import { User, Conversation, Message, ActivityLog } from './types';
 import * as api from './services/mockApi';
 import { SOCKET_URL } from './config';
 import LoginScreen from './components/LoginScreen';
 import ChatLayout from './components/ChatLayout';
+import AdminDashboard from './components/AdminDashboard';
+import AdminSetup from './components/AdminSetup';
+import { generateMockActivityLogs, enhanceUsersForAdmin, enhanceConversationsForAdmin } from './services/adminMockData';
 
 // Assuming io is globally available from the script tag in index.html
 declare const io: any;
@@ -17,6 +20,14 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const [typingConversations, setTypingConversations] = useState<Set<string>>(new Set());
+    const [showAdminDashboard, setShowAdminDashboard] = useState<boolean>(false);
+    const [showAdminSetup, setShowAdminSetup] = useState<boolean>(false);
+    
+    // Admin data
+    const [allUsers, setAllUsers] = useState<User[]>([]);
+    const [allConversations, setAllConversations] = useState<Conversation[]>([]);
+    const [allMessages, setAllMessages] = useState<Message[]>([]);
+    const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
 
     const socket = useRef<any>(null);
@@ -28,6 +39,10 @@ const App: React.FC = () => {
                 try {
                     const currentUser = await api.getProfile();
                     setUser(currentUser);
+                    // Automatically open admin dashboard if user is admin
+                    if (currentUser.role === 'admin') {
+                        setShowAdminDashboard(true);
+                    }
                 } catch (err) {
                     console.error('Auth check failed', err);
                     api.logout(); // Clear invalid token
@@ -172,6 +187,10 @@ const App: React.FC = () => {
     const handleLoginSuccess = ({ user: loggedInUser, token }: { user: User, token: string }) => {
         api.setToken(token);
         setUser(loggedInUser);
+        // Automatically open admin dashboard if user is admin
+        if (loggedInUser.role === 'admin') {
+            setShowAdminDashboard(true);
+        }
     };
 
     const handleLogout = () => {
@@ -183,6 +202,8 @@ const App: React.FC = () => {
         setActiveConversation(null);
         setConversations([]);
         setMessages([]);
+        setShowAdminDashboard(false);
+        setShowAdminSetup(false);
     };
 
     const handleSelectConversation = async (conversation: Conversation) => {
@@ -274,6 +295,63 @@ const App: React.FC = () => {
         }
     };
 
+    // Admin functions
+    const fetchAdminData = useCallback(async () => {
+        try {
+            // Fetch all users (in real app, this would be an admin-only API call)
+            const users = await api.getAllUsers();
+            const enhancedUsers = enhanceUsersForAdmin(users);
+            setAllUsers(enhancedUsers);
+
+            // Fetch all conversations (admin-only)
+            const allConvs: Conversation[] = [];
+            for (const u of users) {
+                const userConvs = await api.getConversations(u.id);
+                userConvs.forEach(conv => {
+                    if (!allConvs.find(c => c.id === conv.id)) {
+                        allConvs.push(conv);
+                    }
+                });
+            }
+            const enhancedConvs = enhanceConversationsForAdmin(allConvs);
+            setAllConversations(enhancedConvs);
+
+            // Fetch all messages (admin-only)
+            const allMsgs: Message[] = [];
+            for (const conv of allConvs) {
+                const convMsgs = await api.getMessages(conv.id);
+                allMsgs.push(...convMsgs);
+            }
+            setAllMessages(allMsgs);
+
+            // Generate activity logs
+            const logs = generateMockActivityLogs(enhancedUsers, enhancedConvs, allMsgs);
+            setActivityLogs(logs);
+        } catch (err) {
+            console.error('Failed to fetch admin data:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (user && user.role === 'admin') {
+            fetchAdminData();
+        }
+    }, [user, fetchAdminData]);
+
+    const handleToggleAdminDashboard = () => {
+        setShowAdminDashboard(prev => !prev);
+    };
+
+    const handleShowAdminSetup = () => {
+        setShowAdminSetup(true);
+    };
+
+    const handleAdminCreated = () => {
+        setShowAdminSetup(false);
+        // Optionally refresh the page or show a success message
+        window.location.reload();
+    };
+
     if (isAuthLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-200">
@@ -282,24 +360,63 @@ const App: React.FC = () => {
         );
     }
 
+    // Show Admin Setup if requested
+    if (showAdminSetup) {
+        return <AdminSetup onAdminCreated={handleAdminCreated} />;
+    }
+
     if (!user) {
-        return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+        return <LoginScreen onLoginSuccess={handleLoginSuccess} onShowAdminSetup={handleShowAdminSetup} />;
+    }
+
+    // Show Admin Dashboard if user is admin and toggle is on
+    if (user.role === 'admin' && showAdminDashboard) {
+        return (
+            <AdminDashboard
+                currentUser={user}
+                allUsers={allUsers}
+                allConversations={allConversations}
+                allMessages={allMessages}
+                activityLogs={activityLogs}
+                onLogout={() => {
+                    handleLogout();
+                    setShowAdminDashboard(false);
+                }}
+                onRefreshData={fetchAdminData}
+            />
+        );
     }
 
     return (
-        <ChatLayout
-            currentUser={user}
-            conversations={conversations}
-            activeConversation={activeConversation}
-            messages={messages}
-            onSelectConversation={handleSelectConversation}
-            onSendMessage={handleSendMessage}
-            onLogout={handleLogout}
-            onStartNewConversation={handleStartNewConversation}
-            onUpdateProfile={handleUpdateProfile}
-            isTyping={activeConversation ? typingConversations.has(activeConversation.id) : false}
-            onTyping={handleTyping}
-        />
+        <>
+            {/* Admin Toggle Button */}
+            {user.role === 'admin' && (
+                <button
+                    onClick={handleToggleAdminDashboard}
+                    className="fixed top-4 right-4 z-50 px-4 py-2 gradient-indigo text-white rounded-xl font-semibold shadow-modern-lg hover:shadow-glow transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+                    title="Open Admin Dashboard"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Admin
+                </button>
+            )}
+            
+            <ChatLayout
+                currentUser={user}
+                conversations={conversations}
+                activeConversation={activeConversation}
+                messages={messages}
+                onSelectConversation={handleSelectConversation}
+                onSendMessage={handleSendMessage}
+                onLogout={handleLogout}
+                onStartNewConversation={handleStartNewConversation}
+                onUpdateProfile={handleUpdateProfile}
+                isTyping={activeConversation ? typingConversations.has(activeConversation.id) : false}
+                onTyping={handleTyping}
+            />
+        </>
     );
 };
 

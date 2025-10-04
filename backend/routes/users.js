@@ -1,6 +1,16 @@
 const router = require('express').Router();
 const User = require('../models/User');
 
+// Get all users (Admin only - in production, add authentication middleware)
+router.get('/', async (req, res) => {
+    try {
+        const users = await User.find({});
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // Search for users
 router.get('/search', async (req, res) => {
     const query = req.query.q;
@@ -56,6 +66,35 @@ router.put('/:id', async (req, res) => {
         }
 
         res.status(200).json(updatedUser);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Make a user admin by email
+router.post('/make-admin', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email: email.toLowerCase() });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found with this email' });
+        }
+
+        // Update user role to admin
+        user.role = 'admin';
+        await user.save();
+
+        res.status(200).json({ 
+            message: 'User successfully promoted to admin',
+            user: user 
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

@@ -29,10 +29,10 @@ const ConversationListItem: React.FC<ConversationListItemProps> = ({ conversatio
     return (
         <div
             onClick={onSelect}
-            className={`flex items-center p-3 sm:p-4 mx-2 my-1 cursor-pointer rounded-xl transition-all duration-200 transform active:scale-[0.98] hover:shadow-md ${
+            className={`flex items-center p-3 sm:p-4 mx-2 my-1 cursor-pointer rounded-xl transition-all duration-200 transform active:scale-[0.98] hover:shadow-modern ${
                 isActive 
-                    ? 'bg-gradient-to-r from-teal-50 to-blue-50 shadow-sm border-l-4 border-teal-500' 
-                    : 'hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 shadow-modern border-l-4 border-indigo-500' 
+                    : 'hover:bg-indigo-50/30'
             }`}
         >
             <div className="relative flex-shrink-0">
@@ -40,7 +40,7 @@ const ConversationListItem: React.FC<ConversationListItemProps> = ({ conversatio
                     src={otherUser.avatar} 
                     alt={otherUser.name} 
                     className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover transition-all duration-200 ${
-                        isActive ? 'ring-2 ring-teal-400' : 'ring-2 ring-gray-200'
+                        isActive ? 'ring-2 ring-indigo-400' : 'ring-2 ring-cool-200'
                     }`}
                 />
                 {otherUser.isOnline && (
@@ -50,24 +50,24 @@ const ConversationListItem: React.FC<ConversationListItemProps> = ({ conversatio
             <div className="flex-1 min-w-0 ml-3 sm:ml-4">
                 <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                     <p className={`text-sm sm:text-base font-semibold truncate ${
-                        isActive ? 'text-teal-700' : 'text-gray-800'
+                        isActive ? 'text-indigo-700' : 'text-cool-800'
                     }`}>
                         {otherUser.name}
                     </p>
                     <p className={`text-xs flex-shrink-0 ml-2 ${
-                        isActive ? 'text-teal-600 font-medium' : 'text-gray-500'
+                        isActive ? 'text-indigo-600 font-medium' : 'text-cool-500'
                     }`}>
                         {conversation.lastMessage ? new Date(conversation.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </p>
                 </div>
                 <div className="flex items-center">
                     <p className={`text-xs sm:text-sm truncate flex-1 ${
-                        isActive ? 'text-gray-600' : 'text-gray-500'
+                        isActive ? 'text-cool-600' : 'text-cool-500'
                     }`}>
                         {lastMessageText()}
                     </p>
                     {conversation.lastMessage && conversation.lastMessage.status !== 'read' && (
-                        <span className="flex-shrink-0 w-2 h-2 ml-2 bg-teal-500 rounded-full"></span>
+                        <span className="flex-shrink-0 w-2 h-2 ml-2 bg-indigo-500 rounded-full shadow-glow"></span>
                     )}
                 </div>
             </div>

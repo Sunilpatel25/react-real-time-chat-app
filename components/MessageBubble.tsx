@@ -11,19 +11,19 @@ interface MessageBubbleProps {
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSender }) => {
     const alignment = isSender ? 'items-end' : 'items-start';
     const bubbleColor = isSender 
-        ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md' 
-        : 'bg-white text-gray-800 shadow-md border border-gray-100';
+        ? 'gradient-indigo text-white shadow-modern' 
+        : 'bg-white text-cool-800 shadow-modern border border-indigo-100';
     const bubbleRadius = isSender ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md';
 
     const renderStatus = () => {
         if (!isSender) return null;
         switch (message.status) {
             case 'sent':
-                return <DoneIcon className="w-4 h-4 ml-1 text-teal-100" />;
+                return <DoneIcon className="w-4 h-4 ml-1 text-indigo-100" />;
             case 'delivered':
-                return <DoneAllIcon className="w-4 h-4 ml-1 text-teal-100" />;
+                return <DoneAllIcon className="w-4 h-4 ml-1 text-indigo-100" />;
             case 'read':
-                return <DoneAllIcon className="w-4 h-4 ml-1 text-blue-300" />;
+                return <DoneAllIcon className="w-4 h-4 ml-1 text-purple-200" />;
             default:
                 return null;
         }
@@ -39,7 +39,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSender }) => {
                     <p className="text-sm leading-relaxed break-words">{message.text}</p>
                 )}
                 <div className="flex items-center self-end mt-1 space-x-1">
-                    <span className={`text-xs ${isSender ? 'text-teal-50' : 'text-gray-400'}`}>
+                    <span className={`text-xs ${isSender ? 'text-indigo-50' : 'text-cool-400'}`}>
                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {renderStatus()}
