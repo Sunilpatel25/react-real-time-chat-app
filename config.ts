@@ -10,7 +10,7 @@ const PORT = 8900;
 const isProduction = import.meta.env.PROD;
 
 // IMPORTANT: After deploying backend, update this URL
-const PRODUCTION_BACKEND_URL = 'https://your-backend-name.onrender.com'; // UPDATE THIS AFTER BACKEND DEPLOY!
+const PRODUCTION_BACKEND_URL = 'https://smart-chat-5mmr.onrender.com/'; // UPDATE THIS AFTER BACKEND DEPLOY!
 
 const LOCAL_BACKEND_URL = USE_NETWORK_IP 
     ? `http://${NETWORK_IP}:${PORT}`
