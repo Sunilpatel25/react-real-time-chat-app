@@ -8,6 +8,7 @@ import EnhancedAdminStats from './EnhancedAdminStats';
 import EnhancedUserManagement from './EnhancedUserManagement';
 import SystemHealth from './SystemHealth';
 import { DashboardIcon, UsersIcon, ChatBubbleIcon, ActivityIcon, RefreshIcon } from './Icons';
+import { adminApi } from '../services/adminApi';
 
 interface AdminDashboardProps {
     currentUser: User;
@@ -402,8 +403,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             {/* Header */}
-            <header className="gradient-indigo shadow-modern-lg border-b border-indigo-200/50 backdrop-blur-sm">
-                <div className="px-4 sm:px-6 lg:px-8 py-4">
+            <header className="bg-gradient-to-r from-slate-800 via-blue-900 to-indigo-900 shadow-2xl border-b border-blue-800/50">
+                <div className="px-4 sm:px-6 lg:px-8 py-5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shadow-glow">
@@ -506,17 +507,58 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {activeTab === 'users' && (
                         <EnhancedUserManagement 
                             allUsers={allUsers}
-                            onMakeAdmin={(userId) => {
-                                console.log('Make admin:', userId);
-                                addNotification('User promoted to admin', 'success');
+                            onMakeAdmin={async (userId) => {
+                                try {
+                                    // Find user by ID to get email
+                                    const user = allUsers.find(u => u.id === userId);
+                                    if (!user) {
+                                        addNotification('User not found', 'error');
+                                        return;
+                                    }
+
+                                    // Call API to make admin
+                                    await adminApi.makeAdmin(user.email);
+                                    
+                                    // Refresh data to get updated user list
+                                    onRefreshData();
+                                    addNotification('User promoted to admin successfully', 'success');
+                                } catch (error) {
+                                    console.error('Failed to make admin:', error);
+                                    addNotification('Failed to promote user to admin', 'error');
+                                }
                             }}
-                            onRemoveAdmin={(userId) => {
-                                console.log('Remove admin:', userId);
-                                addNotification('Admin privileges removed', 'warning');
+                            onRemoveAdmin={async (userId) => {
+                                try {
+                                    // Find user by ID to get email
+                                    const user = allUsers.find(u => u.id === userId);
+                                    if (!user) {
+                                        addNotification('User not found', 'error');
+                                        return;
+                                    }
+
+                                    // Call API to remove admin
+                                    await adminApi.removeAdmin(user.email);
+                                    
+                                    // Refresh data to get updated user list
+                                    onRefreshData();
+                                    addNotification('Admin privileges removed successfully', 'warning');
+                                } catch (error) {
+                                    console.error('Failed to remove admin:', error);
+                                    addNotification('Failed to remove admin privileges', 'error');
+                                }
                             }}
-                            onDeleteUser={(userId) => {
-                                console.log('Delete user:', userId);
-                                addNotification('User deleted successfully', 'success');
+                            onDeleteUser={async (userId) => {
+                                try {
+                                    // Call API to delete user
+                                    await adminApi.deleteUser(userId);
+                                    
+                                    // Refresh data to get updated user list
+                                    onRefreshData();
+                                    addNotification('User deleted successfully', 'success');
+                                } catch (error) {
+                                    console.error('Failed to delete user:', error);
+                                    addNotification('Failed to delete user', 'error');
+                                }
                             }}
                         />
                     )}

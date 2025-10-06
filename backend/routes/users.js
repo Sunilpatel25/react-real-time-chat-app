@@ -100,4 +100,66 @@ router.post('/make-admin', async (req, res) => {
     }
 });
 
+// Remove admin privileges by email
+router.post('/remove-admin', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email: email.toLowerCase() });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found with this email' });
+        }
+
+        // Update user role to user (remove admin)
+        user.role = 'user';
+        await user.save();
+
+        res.status(200).json({ 
+            message: 'Admin privileges successfully removed',
+            user: user 
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Delete user by ID
+router.delete('/:id', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        // Find user first to check if exists
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Prevent deletion of admin users (optional security measure)
+        if (user.role === 'admin') {
+            return res.status(403).json({ message: 'Cannot delete admin users' });
+        }
+
+        // Delete the user
+        await User.findByIdAndDelete(userId);
+
+        res.status(200).json({ 
+            message: 'User successfully deleted',
+            deletedUser: {
+                id: user._id,
+                name: user.name,
+                email: user.email
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;
