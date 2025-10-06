@@ -48,13 +48,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
     return (
         <div className="space-y-6 animate-fadeIn">
             {/* Header & Filters */}
-            <div className="glass rounded-2xl p-6 border border-indigo-100/50 shadow-modern">
+            <div className="glass rounded-2xl p-6 border border-primary-100/50 shadow-modern">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-2xl font-bold font-display bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold font-display bg-gradient-to-r from-primary-600 via-secondary-600 to-accent-600 bg-clip-text text-transparent">
                             User Management
                         </h2>
-                        <p className="text-sm text-cool-600 mt-1">{filteredUsers.length} users found</p>
+                        <p className="text-sm text-neutral-600 mt-1">{filteredUsers.length} users found</p>
                     </div>
                     
                     <div className="flex gap-2">
@@ -65,8 +65,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                 className={`
                                     px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200
                                     ${filterStatus === status
-                                        ? 'gradient-indigo text-white shadow-modern'
-                                        : 'bg-cool-100 text-cool-700 hover:bg-cool-200'
+                                        ? 'gradient-primary text-white shadow-modern'
+                                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                                     }
                                 `}
                             >
@@ -78,22 +78,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
 
                 {/* Search Bar */}
                 <div className="relative">
-                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cool-400" />
+                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                     <input
                         type="text"
                         placeholder="Search users by name or email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 glass-indigo border-2 border-indigo-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-200 text-base"
+                        className="w-full pl-12 pr-4 py-3 glass-primary border-2 border-primary-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-400 transition-all duration-200 text-base"
                     />
                 </div>
             </div>
 
             {/* Users Table */}
-            <div className="glass rounded-2xl border border-indigo-100/50 shadow-modern overflow-hidden">
+            <div className="glass rounded-2xl border border-primary-100/50 shadow-modern overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="gradient-indigo text-white">
+                        <thead className="gradient-primary text-white">
                             <tr>
                                 <th className="px-6 py-4 text-left text-sm font-bold">User</th>
                                 <th className="px-6 py-4 text-left text-sm font-bold">Status</th>
@@ -103,11 +103,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                 <th className="px-6 py-4 text-right text-sm font-bold">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-indigo-100/50">
+                        <tbody className="divide-y divide-primary-100/50">
                             {filteredUsers.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center">
-                                        <div className="text-cool-500">
+                                        <div className="text-neutral-500">
                                             <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                             <p className="text-sm font-semibold">No users found</p>
                                             <p className="text-xs mt-1">Try adjusting your search or filters</p>
@@ -118,7 +118,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                 filteredUsers.map((user, index) => (
                                     <tr 
                                         key={user.id}
-                                        className="hover:bg-indigo-50/50 transition-colors duration-200 animate-slideUp"
+                                        className="hover:bg-primary-50/50 transition-colors duration-200 animate-slideUp"
                                         style={{ animationDelay: `${index * 0.05}s` }}
                                     >
                                         <td className="px-6 py-4">
@@ -127,15 +127,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                                     <img 
                                                         src={user.avatar} 
                                                         alt={user.name} 
-                                                        className="w-10 h-10 rounded-full object-cover border-2 border-indigo-200 ring-4 ring-indigo-50"
+                                                        className="w-10 h-10 rounded-full object-cover border-2 border-primary-200 ring-4 ring-primary-50"
                                                     />
                                                     {user.isOnline && (
                                                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-glow"></div>
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-semibold text-cool-800">{user.name}</p>
-                                                    <p className="text-xs text-cool-500">{user.email}</p>
+                                                    <p className="font-semibold text-neutral-800">{user.name}</p>
+                                                    <p className="text-xs text-neutral-500">{user.email}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -144,33 +144,33 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                                 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
                                                 ${user.isOnline 
                                                     ? 'bg-emerald-100 text-emerald-700' 
-                                                    : 'bg-cool-100 text-cool-700'
+                                                    : 'bg-neutral-100 text-neutral-700'
                                                 }
                                             `}>
-                                                <div className={`w-2 h-2 rounded-full ${user.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-cool-400'}`}></div>
+                                                <div className={`w-2 h-2 rounded-full ${user.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-400'}`}></div>
                                                 {user.isOnline ? 'Online' : 'Offline'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-full bg-cool-100 rounded-full h-2 max-w-[100px]">
+                                                <div className="w-full bg-neutral-100 rounded-full h-2 max-w-[100px]">
                                                     <div 
-                                                        className="gradient-indigo h-2 rounded-full transition-all duration-300"
+                                                        className="gradient-primary h-2 rounded-full transition-all duration-300"
                                                         style={{ width: `${Math.min((getUserActivityCount(user.id) / 50) * 100, 100)}%` }}
                                                     ></div>
                                                 </div>
-                                                <span className="text-xs font-semibold text-cool-600 whitespace-nowrap">
+                                                <span className="text-xs font-semibold text-neutral-600 whitespace-nowrap">
                                                     {getUserActivityCount(user.id)} acts
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm text-cool-600">
+                                            <span className="text-sm text-neutral-600">
                                                 {formatLastSeen(user.lastSeen || getUserLastActivity(user.id))}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm text-cool-600">
+                                            <span className="text-sm text-neutral-600">
                                                 {user.joinedAt ? new Date(user.joinedAt).toLocaleDateString() : 'N/A'}
                                             </span>
                                         </td>
@@ -178,7 +178,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => setSelectedUser(user)}
-                                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                                                    className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                                                     title="View details"
                                                 >
                                                     <EyeIcon />
@@ -212,7 +212,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                     onClick={() => setSelectedUser(null)}
                 >
                     <div 
-                        className="glass rounded-3xl shadow-modern-xl w-full max-w-2xl p-6 sm:p-8 space-y-6 transform transition-all animate-scaleIn max-h-[90vh] overflow-y-auto border border-indigo-200/50 neon-border"
+                        className="glass rounded-3xl shadow-modern-xl w-full max-w-2xl p-6 sm:p-8 space-y-6 transform transition-all animate-scaleIn max-h-[90vh] overflow-y-auto border border-primary-200/50 neon-border"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-start justify-between">
@@ -221,30 +221,30 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, activityLogs }) 
                                     <img 
                                         src={selectedUser.avatar} 
                                         alt={selectedUser.name} 
-                                        className="w-20 h-20 rounded-full object-cover border-4 border-indigo-200 ring-4 ring-indigo-50 shadow-glow"
+                                        className="w-20 h-20 rounded-full object-cover border-4 border-primary-200 ring-4 ring-primary-50 shadow-glow"
                                     />
                                     {selectedUser.isOnline && (
                                         <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-3 border-white shadow-glow"></div>
                                     )}
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-bold font-display text-cool-800">{selectedUser.name}</h3>
-                                    <p className="text-sm text-cool-600">{selectedUser.email}</p>
+                                    <h3 className="text-2xl font-bold font-display text-neutral-800">{selectedUser.name}</h3>
+                                    <p className="text-sm text-neutral-600">{selectedUser.email}</p>
                                     <span className={`
                                         inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mt-2
                                         ${selectedUser.isOnline 
                                             ? 'bg-emerald-100 text-emerald-700' 
-                                            : 'bg-cool-100 text-cool-700'
+                                            : 'bg-neutral-100 text-neutral-700'
                                         }
                                     `}>
-                                        <div className={`w-2 h-2 rounded-full ${selectedUser.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-cool-400'}`}></div>
+                                        <div className={`w-2 h-2 rounded-full ${selectedUser.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-400'}`}></div>
                                         {selectedUser.isOnline ? 'Online' : 'Offline'}
                                     </span>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setSelectedUser(null)}
-                                className="text-cool-400 hover:text-indigo-600 focus:outline-none transition-all hover:rotate-90 duration-300 p-2 rounded-lg hover:bg-indigo-50/50"
+                                className="text-neutral-400 hover:text-primary-600 focus:outline-none transition-all hover:rotate-90 duration-300 p-2 rounded-lg hover:bg-primary-50/50"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

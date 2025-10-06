@@ -23,6 +23,7 @@ const authRoutes = require('./routes/auth');
 const conversationRoutes = require('./routes/conversations');
 const messageRoutes = require('./routes/messages');
 const userRoutes = require('./routes/users');
+const adminRoutes = require('./routes/admin');
 const Message = require('./models/Message');
 const Conversation = require('./models/Conversation');
 
@@ -43,6 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // Socket.IO Connection
@@ -109,6 +111,91 @@ io.on('connection', (socket) => {
         const receiver = getUser(receiverId);
         if (receiver) {
             io.to(receiver.socketId).emit('typingStop', { conversationId });
+        }
+    });
+    
+    // Admin: Edit message (real-time)
+    socket.on('adminEditMessage', async ({ messageId, newText, adminId, conversationId }) => {
+        try {
+            const message = await Message.findById(messageId);
+            if (message) {
+                const originalText = message.text;
+                message.text = newText;
+                message.isEdited = true;
+                message.lastEditedBy = adminId;
+                message.lastEditedAt = new Date();
+                
+                if (!message.editHistory) message.editHistory = [];
+                message.editHistory.push({
+                    editedBy: adminId,
+                    editedAt: new Date(),
+                    originalText: originalText,
+                    editType: 'admin',
+                });
+                
+                await message.save();
+                
+                // Notify all users in the conversation
+                io.emit('messageEdited', {
+                    messageId,
+                    newText,
+                    conversationId,
+                    editedBy: adminId,
+                    isAdminEdit: true,
+                });
+                
+                console.log(`[SOCKET] Admin ${adminId} edited message ${messageId}`);
+            }
+        } catch (err) {
+            console.error('Socket admin edit error:', err);
+        }
+    });
+    
+    // Admin: Delete message (real-time)
+    socket.on('adminDeleteMessage', async ({ messageId, adminId, conversationId }) => {
+        try {
+            const message = await Message.findByIdAndDelete(messageId);
+            if (message) {
+                // Notify all users in the conversation
+                io.emit('messageDeleted', {
+                    messageId,
+                    conversationId,
+                    deletedBy: adminId,
+                    isAdminDelete: true,
+                });
+                
+                console.log(`[SOCKET] Admin ${adminId} deleted message ${messageId}`);
+            }
+        } catch (err) {
+            console.error('Socket admin delete error:', err);
+        }
+    });
+    
+    // Admin: Flag message (real-time)
+    socket.on('adminFlagMessage', async ({ messageId, adminId, reason, conversationId }) => {
+        try {
+            const message = await Message.findById(messageId);
+            if (message) {
+                message.isFlagged = true;
+                message.flaggedBy = adminId;
+                message.flaggedAt = new Date();
+                message.flagReason = reason || 'No reason provided';
+                message.flagStatus = 'pending';
+                
+                await message.save();
+                
+                // Notify admins (you can filter by admin role)
+                io.emit('messageFlagged', {
+                    messageId,
+                    conversationId,
+                    flaggedBy: adminId,
+                    reason,
+                });
+                
+                console.log(`[SOCKET] Admin ${adminId} flagged message ${messageId}`);
+            }
+        } catch (err) {
+            console.error('Socket admin flag error:', err);
         }
     });
     

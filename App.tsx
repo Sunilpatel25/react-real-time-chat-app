@@ -141,12 +141,115 @@ const App: React.FC = () => {
             );
         };
 
+        // Admin real-time event handlers
+        const handleMessageEdited = (data: { 
+            messageId: string; 
+            text: string; 
+            editedBy: string;
+            isAdmin: boolean;
+            timestamp: number;
+        }) => {
+            console.log('📝 Message edited by admin:', data);
+            
+            // Update message in current conversation
+            if (activeConversation) {
+                setMessages(prev =>
+                    prev.map(msg =>
+                        msg.id === data.messageId
+                            ? { 
+                                ...msg, 
+                                text: data.text,
+                                isEdited: true,
+                                lastEditedAt: data.timestamp,
+                                lastEditedBy: data.editedBy
+                              }
+                            : msg
+                    )
+                );
+            }
+
+            // Update message in conversations list (if it's the last message)
+            setConversations(prev =>
+                prev.map(c => {
+                    if (c.lastMessage?.id === data.messageId) {
+                        return {
+                            ...c,
+                            lastMessage: {
+                                ...c.lastMessage,
+                                text: data.text,
+                                isEdited: true
+                            }
+                        };
+                    }
+                    return c;
+                })
+            );
+        };
+
+        const handleMessageDeleted = (data: { 
+            messageId: string; 
+            conversationId: string;
+            deletedBy: string;
+            isAdmin: boolean;
+        }) => {
+            console.log('🗑️ Message deleted by admin:', data);
+            
+            // Remove message from current conversation
+            if (activeConversation?.id === data.conversationId) {
+                setMessages(prev => prev.filter(msg => msg.id !== data.messageId));
+            }
+
+            // Update conversations list
+            setConversations(prev =>
+                prev.map(c => {
+                    if (c.lastMessage?.id === data.messageId) {
+                        // Optionally fetch new last message or set to null
+                        return { ...c, lastMessage: undefined };
+                    }
+                    return c;
+                })
+            );
+        };
+
+        const handleMessageFlagged = (data: { 
+            messageId: string; 
+            isFlagged: boolean;
+            flaggedBy?: string;
+            flagReason?: string;
+            timestamp?: number;
+        }) => {
+            console.log('🚩 Message flag status changed:', data);
+            
+            // Update message flag status in current conversation
+            if (activeConversation) {
+                setMessages(prev =>
+                    prev.map(msg =>
+                        msg.id === data.messageId
+                            ? { 
+                                ...msg, 
+                                isFlagged: data.isFlagged,
+                                flaggedBy: data.flaggedBy,
+                                flagReason: data.flagReason,
+                                flaggedAt: data.timestamp
+                              }
+                            : msg
+                    )
+                );
+            }
+        };
+
         socket.current.on('receiveMessage', handleReceiveMessage);
         socket.current.on('messagesRead', handleMessagesRead);
+        socket.current.on('messageEdited', handleMessageEdited);
+        socket.current.on('messageDeleted', handleMessageDeleted);
+        socket.current.on('messageFlagged', handleMessageFlagged);
 
         return () => {
             socket.current.off('receiveMessage', handleReceiveMessage);
             socket.current.off('messagesRead', handleMessagesRead);
+            socket.current.off('messageEdited', handleMessageEdited);
+            socket.current.off('messageDeleted', handleMessageDeleted);
+            socket.current.off('messageFlagged', handleMessageFlagged);
         };
     }, [user, activeConversation, markConversationAsRead]);
 
@@ -415,6 +518,7 @@ const App: React.FC = () => {
                 onUpdateProfile={handleUpdateProfile}
                 isTyping={activeConversation ? typingConversations.has(activeConversation.id) : false}
                 onTyping={handleTyping}
+                socket={socket}
             />
         </>
     );

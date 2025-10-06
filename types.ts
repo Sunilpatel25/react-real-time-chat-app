@@ -17,6 +17,14 @@ export interface Message {
     image?: string;
     timestamp: number;
     status: 'sent' | 'delivered' | 'read';
+    // Admin tracking fields
+    isEdited?: boolean;
+    lastEditedBy?: string;
+    lastEditedAt?: number;
+    isFlagged?: boolean;
+    flaggedBy?: string;
+    flaggedAt?: number;
+    flagReason?: string;
 }
 
 export interface Conversation {

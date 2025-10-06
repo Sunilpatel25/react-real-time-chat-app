@@ -21,7 +21,65 @@ const MessageSchema = new mongoose.Schema({
         type: String,
         enum: ['sent', 'delivered', 'read'],
         default: 'sent',
-    }
+    },
+    // Admin edit tracking
+    isEdited: {
+        type: Boolean,
+        default: false,
+    },
+    lastEditedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    lastEditedAt: {
+        type: Date,
+    },
+    editHistory: [{
+        editedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        editedAt: {
+            type: Date,
+            default: Date.now,
+        },
+        originalText: String,
+        editType: {
+            type: String,
+            enum: ['user', 'admin'],
+            default: 'user',
+        },
+    }],
+    // Admin flag tracking
+    isFlagged: {
+        type: Boolean,
+        default: false,
+    },
+    flaggedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    flaggedAt: {
+        type: Date,
+    },
+    flagReason: {
+        type: String,
+    },
+    flagStatus: {
+        type: String,
+        enum: ['pending', 'reviewed', 'resolved'],
+        default: 'pending',
+    },
+    resolvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    resolvedAt: {
+        type: Date,
+    },
+    resolution: {
+        type: String,
+    },
 }, {
     timestamps: true
 });

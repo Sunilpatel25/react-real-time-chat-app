@@ -11,19 +11,19 @@ interface MessageBubbleProps {
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSender }) => {
     const alignment = isSender ? 'items-end' : 'items-start';
     const bubbleColor = isSender 
-        ? 'gradient-indigo text-white shadow-modern' 
-        : 'bg-white text-cool-800 shadow-modern border border-indigo-100';
+        ? 'gradient-primary text-white shadow-modern' 
+        : 'bg-white text-neutral-800 shadow-modern border border-primary-100';
     const bubbleRadius = isSender ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md';
 
     const renderStatus = () => {
         if (!isSender) return null;
         switch (message.status) {
             case 'sent':
-                return <DoneIcon className="w-4 h-4 ml-1 text-indigo-100" />;
+                return <DoneIcon className="w-4 h-4 ml-1 text-primary-100" />;
             case 'delivered':
-                return <DoneAllIcon className="w-4 h-4 ml-1 text-indigo-100" />;
+                return <DoneAllIcon className="w-4 h-4 ml-1 text-primary-100" />;
             case 'read':
-                return <DoneAllIcon className="w-4 h-4 ml-1 text-purple-200" />;
+                return <DoneAllIcon className="w-4 h-4 ml-1 text-secondary-200" />;
             default:
                 return null;
         }
@@ -38,8 +38,29 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSender }) => {
                 {message.text && (
                     <p className="text-sm leading-relaxed break-words">{message.text}</p>
                 )}
+                
+                {/* Admin Edit Badge */}
+                {message.isEdited && message.lastEditedBy && (
+                    <div className="flex items-center gap-1 mt-1.5 px-2 py-1 bg-accent-100/90 text-accent-700 rounded-full text-xs font-medium shadow-sm">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        <span>Edited by Admin</span>
+                    </div>
+                )}
+                
+                {/* Flag Badge */}
+                {message.isFlagged && (
+                    <div className="flex items-center gap-1 mt-1.5 px-2 py-1 bg-accent-100/90 text-accent-700 rounded-full text-xs font-medium shadow-sm">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd" />
+                        </svg>
+                        <span>Flagged</span>
+                    </div>
+                )}
+                
                 <div className="flex items-center self-end mt-1 space-x-1">
-                    <span className={`text-xs ${isSender ? 'text-indigo-50' : 'text-cool-400'}`}>
+                    <span className={`text-xs ${isSender ? 'text-white/80' : 'text-neutral-400'}`}>
                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {renderStatus()}
