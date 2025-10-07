@@ -3,6 +3,7 @@ import { User, ActivityLog, ChatStats, Conversation, Message } from '../types';
 import AdminStats from './AdminStats';
 import UserManagement from './UserManagement';
 import ChatMonitor from './ChatMonitor';
+import QuickChatView from './QuickChatView';
 import ActivityLogComponent from './ActivityLogComponent';
 import EnhancedAdminStats from './EnhancedAdminStats';
 import EnhancedUserManagement from './EnhancedUserManagement';
@@ -33,6 +34,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('overview');
     const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'warning' | 'error'}>>([]);
+    const [chatViewMode, setChatViewMode] = useState<'quick' | 'full'>('quick');
     
     // Settings state
     const [settings, setSettings] = useState({
@@ -564,11 +566,58 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                     
                     {activeTab === 'chats' && (
-                        <ChatMonitor 
-                            conversations={allConversations}
-                            messages={allMessages}
-                            users={allUsers}
-                        />
+                        <div className="space-y-4">
+                            {/* Chat View Toggle */}
+                            <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-indigo-100/50 shadow-modern">
+                                <div>
+                                    <h2 className="text-xl font-bold text-cool-800 flex items-center gap-2">
+                                        <ChatBubbleIcon className="w-5 h-5 text-indigo-600" />
+                                        Chat Management
+                                    </h2>
+                                    <p className="text-sm text-cool-600 mt-1">
+                                        Monitor conversations and messaging activity
+                                    </p>
+                                </div>
+                                <div className="flex bg-indigo-100 rounded-lg p-1">
+                                    <button
+                                        onClick={() => setChatViewMode('quick')}
+                                        className={`px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 ${
+                                            chatViewMode === 'quick'
+                                                ? 'bg-white text-indigo-700 shadow-sm'
+                                                : 'text-indigo-600 hover:text-indigo-700'
+                                        }`}
+                                    >
+                                        Quick View
+                                    </button>
+                                    <button
+                                        onClick={() => setChatViewMode('full')}
+                                        className={`px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 ${
+                                            chatViewMode === 'full'
+                                                ? 'bg-white text-indigo-700 shadow-sm'
+                                                : 'text-indigo-600 hover:text-indigo-700'
+                                        }`}
+                                    >
+                                        Full Monitor
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Chat Content */}
+                            {chatViewMode === 'quick' ? (
+                                <QuickChatView
+                                    conversations={allConversations}
+                                    messages={allMessages}
+                                    users={allUsers}
+                                    onViewFullChat={() => setChatViewMode('full')}
+                                />
+                            ) : (
+                                <ChatMonitor
+                                    conversations={allConversations}
+                                    messages={allMessages}
+                                    users={allUsers}
+                                />
+                            )}
+                        </div>
                     )}
                     
                     {activeTab === 'activity' && (

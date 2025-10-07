@@ -12,7 +12,7 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({ conversations, messages, user
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
     const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'quiet' | 'highVolume'>('all');
-    const [sortType, setSortType] = useState<'recent' | 'messages' | 'engagement'>('recent');
+    const [sortType, setSortType] = useState<'messages' | 'engagement'>('messages');
 
     const getUserById = (userId: string) => {
         return users.find(u => u.id === userId);
@@ -136,12 +136,10 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({ conversations, messages, user
             .sort((a, b) => {
                 switch (sortType) {
                     case 'messages':
+                    default:
                         return b.messageCount - a.messageCount;
                     case 'engagement':
                         return b.messagesLast24h - a.messagesLast24h;
-                    case 'recent':
-                    default:
-                        return (b.lastActive || 0) - (a.lastActive || 0);
                 }
             });
 
@@ -208,7 +206,7 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({ conversations, messages, user
                         <p className="text-sm text-cool-600 mt-1">{filteredConversations.length} of {stats.totalConversations} conversations • {messages.length} total messages tracked</p>
                     </div>
                     <div className="flex gap-2">
-                        {['recent', 'messages', 'engagement'].map(option => (
+                        {['messages', 'engagement'].map(option => (
                             <button
                                 key={option}
                                 onClick={() => setSortType(option as typeof sortType)}
@@ -218,7 +216,6 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({ conversations, messages, user
                                         : 'glass border border-indigo-200/60 text-indigo-600 hover:shadow-sm'
                                 }`}
                             >
-                                {option === 'recent' && 'Latest activity'}
                                 {option === 'messages' && 'Most messages'}
                                 {option === 'engagement' && '24h engagement'}
                             </button>
