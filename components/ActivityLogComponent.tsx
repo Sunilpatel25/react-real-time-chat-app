@@ -138,8 +138,9 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, users }) => {
         }, {} as Record<string, ActivityLog[]>);
 
         Object.entries(groupedLogs).forEach(([date, dayLogs]) => {
-            result.push({ type: 'date', date, count: dayLogs.length });
-            dayLogs.forEach(log => {
+            const logsForDay = dayLogs as ActivityLog[];
+            result.push({ type: 'date', date, count: logsForDay.length });
+            logsForDay.forEach(log => {
                 result.push({ type: 'log', log });
             });
         });
