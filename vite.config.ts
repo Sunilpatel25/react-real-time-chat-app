@@ -21,7 +21,12 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, '.'),
+          '@': path.resolve(__dirname, 'src'),
+          '@components': path.resolve(__dirname, 'src/components'),
+          '@services': path.resolve(__dirname, 'src/services'),
+          '@hooks': path.resolve(__dirname, 'src/hooks'),
+          '@types': path.resolve(__dirname, 'src/types'),
+          '@config': path.resolve(__dirname, 'src/config'),
         }
       },
       build: {
@@ -41,14 +46,14 @@ export default defineConfig(({ mode }) => {
               'vendor-react': ['react', 'react-dom'],
               // Admin components chunk (lazy loaded)
               'admin': [
-                './components/AdminDashboard.tsx',
-                './components/ChatMonitor.tsx',
-                './components/AdminStats.tsx',
-                './components/EnhancedAdminStats.tsx',
-                './components/UserManagement.tsx',
-                './components/EnhancedUserManagement.tsx',
-                './components/ActivityLogComponent.tsx',
-                './components/SystemHealth.tsx',
+                './src/components/admin/AdminDashboard.tsx',
+                './src/components/admin/ChatMonitor.tsx',
+                './src/components/admin/AdminStats.tsx',
+                './src/components/admin/EnhancedAdminStats.tsx',
+                './src/components/admin/UserManagement.tsx',
+                './src/components/admin/EnhancedUserManagement.tsx',
+                './src/components/admin/ActivityLogComponent.tsx',
+                './src/components/admin/SystemHealth.tsx',
               ],
             },
             // Optimize chunk naming for better caching

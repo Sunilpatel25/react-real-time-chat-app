@@ -14,14 +14,20 @@
       "node"
     ],
     "moduleResolution": "bundler",
+  "baseUrl": ".",
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@services/*": ["./src/services/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types": ["./src/types"],
+      "@config": ["./src/config"],
+      "@assets/*": ["./src/assets/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
