@@ -35,6 +35,29 @@ const App: React.FC = () => {
 
     const socket = useRef<any>(null);
 
+    // Mark conversation as read (defined early so effects can use it)
+    const markConversationAsRead = useCallback(async (conversation: Conversation | null) => {
+        if (!conversation || !user) return;
+        try {
+            // Notify via socket for real-time receipts
+            try {
+                socket.current?.emit('markAsRead', { conversationId: conversation.id, receiverId: conversation.otherUser?.id });
+            } catch (err) {
+                // ignore socket emit failures
+            }
+
+            // Persist via API
+            await api.markMessagesAsRead(conversation.id);
+
+            setMessages(prev => prev.map(m => ({ ...m, status: m.senderId === user.id ? m.status : 'read' })));
+            setConversations(prev => prev.map(c => c.id === conversation.id && c.lastMessage ? { ...c, lastMessage: { ...c.lastMessage, status: 'read' as const } } : c));
+        } catch (err) {
+            console.warn('Failed to mark conversation as read:', err);
+        }
+    }, [user]);
+
+    
+
     useEffect(() => {
         const checkLoggedIn = async () => {
             const token = api.getToken();
@@ -47,45 +70,14 @@ const App: React.FC = () => {
                         setShowAdminDashboard(true);
                     }
                 } catch (err) {
-                    console.error('Auth check failed', err);
-                    api.logout(); // Clear invalid token
+                    console.error('Failed to fetch profile during auth check:', err);
+                    setError('Authentication check failed.');
                 }
             }
             setIsAuthLoading(false);
         };
+
         checkLoggedIn();
-    }, []);
-    
-    const markConversationAsRead = useCallback((conversation: Conversation) => {
-        if (!socket.current || !conversation.otherUser || !user) return;
-        
-        socket.current.emit('markAsRead', {
-            conversationId: conversation.id,
-            receiverId: conversation.otherUser.id,
-        });
-
-        // Also update backend
-        api.markMessagesAsRead(conversation.id).catch(err => console.error("Failed to mark as read on backend", err));
-
-    }, [user]);
-
-    const handleViewProfile = useCallback((user: User) => {
-        // For now, just show an alert. In a real app, this would open a profile modal
-        alert(`Viewing profile for ${user.name} (ID: ${user.id})`);
-    }, []);
-
-    const handleBlockUser = useCallback((user: User) => {
-        // For now, just show a confirmation. In a real app, this would block the user
-        if (window.confirm(`Are you sure you want to block ${user.name}?`)) {
-            alert(`${user.name} has been blocked`);
-        }
-    }, []);
-
-    const handleReportUser = useCallback((user: User) => {
-        // For now, just show a confirmation. In a real app, this would report the user
-        if (window.confirm(`Are you sure you want to report ${user.name} for inappropriate behavior?`)) {
-            alert(`${user.name} has been reported`);
-        }
     }, []);
 
     // Effect for Socket Connection and general listeners
@@ -220,8 +212,6 @@ const App: React.FC = () => {
                 })
             );
         };
-
-        // Admin real-time event handlers
         const handleMessageEdited = (data: { 
             messageId: string; 
             text: string; 
@@ -467,6 +457,35 @@ const App: React.FC = () => {
             }
         } catch (err) {
             setError('Failed to start a new conversation.');
+        }
+    };
+
+    
+
+    const handleViewProfile = (profileUser: User) => {
+        // Simple placeholder: open modal or navigate to profile view
+        // For now, alert user's name (UI should implement modal)
+        alert(`View profile: ${profileUser.name}`);
+    };
+
+    const handleBlockUser = async (blockUser: User) => {
+        if (!user) return;
+        try {
+            await api.blockUser(user.id, blockUser.id);
+            setConversations(prev => prev.filter(c => c.otherUser?.id !== blockUser.id));
+        } catch (err) {
+            console.error('Failed to block user:', err);
+        }
+    };
+
+    const handleReportUser = async (reportUser: User) => {
+        if (!user) return;
+        try {
+            await api.reportUser(user.id, reportUser.id);
+            alert(`${reportUser.name} has been reported.`);
+        } catch (err) {
+            console.error('Failed to report user:', err);
+            alert('Failed to report user.');
         }
     };
     

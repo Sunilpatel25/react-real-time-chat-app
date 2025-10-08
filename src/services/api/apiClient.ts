@@ -116,3 +116,19 @@ export const markMessagesAsRead = (conversationId: string): Promise<{ success: b
 export const getAllUsers = (): Promise<User[]> => {
     return apiFetch('/users');
 };
+
+// Block a user (simple placeholder endpoint)
+export const blockUser = (userId: string, targetUserId: string): Promise<{ success: boolean }> => {
+    return apiFetch('/users/block', {
+        method: 'POST',
+        body: JSON.stringify({ userId, targetUserId })
+    });
+};
+
+// Report a user (simple placeholder endpoint)
+export const reportUser = (reporterId: string, reportedUserId: string): Promise<{ success: boolean }> => {
+    return apiFetch('/users/report', {
+        method: 'POST',
+        body: JSON.stringify({ reporterId, reportedUserId })
+    });
+};

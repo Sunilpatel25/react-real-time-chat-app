@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build": "echo \"No build step for backend. If you need to build frontend, run npm run build at the repo root.\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
