@@ -12,7 +12,7 @@ const isProduction = import.meta.env?.PROD ?? false;
 // Backend URLs
 
 // IMPORTANT: After deploying backend, update this URL
-const PRODUCTION_BACKEND_URL = 'https://whatsapp-5wm3.onrender.com/'; // UPDATE THIS AFTER BACKEND DEPLOY!
+const PRODUCTION_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://whatsapp-5wm3.onrender.com'; // fallback if env var not provided
 
 const LOCAL_BACKEND_URL = USE_NETWORK_IP 
     ? `http://${NETWORK_IP}:${PORT}`
