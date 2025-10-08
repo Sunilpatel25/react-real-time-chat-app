@@ -16,89 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
     
     <title>React Real-Time Chat App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    
-    <!-- User-Friendly Chat App Color Palette -->
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              // Primary - Friendly Blue (Telegram-inspired)
-              primary: {
-                50: '#eff6ff',
-                100: '#dbeafe',
-                200: '#bfdbfe',
-                300: '#93c5fd',
-                400: '#60a5fa',
-                500: '#3b82f6',
-                600: '#2563EB', // Main brand - friendly blue
-                700: '#1d4ed8',
-                800: '#1e40af',
-                900: '#1e3a8a',
-              },
-              // Secondary - Warm Green (WhatsApp-inspired)
-              secondary: {
-                50: '#f0fdf4',
-                100: '#dcfce7',
-                200: '#bbf7d0',
-                300: '#86efac',
-                400: '#4ade80',
-                500: '#22C55E', // Main secondary - warm green
-                600: '#16a34a',
-                700: '#15803d',
-                800: '#166534',
-                900: '#14532d',
-              },
-              // Neutral - Warm Gray (easy on eyes)
-              neutral: {
-                50: '#fafafa',
-                100: '#f5f5f5',
-                200: '#e5e5e5',
-                300: '#d4d4d4',
-                400: '#a3a3a3',
-                500: '#737373',
-                600: '#525252',
-                700: '#404040',
-                800: '#262626',
-                900: '#171717',
-              },
-              // Accent - Soft Coral (friendly highlights)
-              accent: {
-                50: '#fff7ed',
-                100: '#ffedd5',
-                200: '#fed7aa',
-                300: '#fdba74',
-                400: '#fb923c',
-                500: '#F97316', // Main accent - soft coral
-                600: '#ea580c',
-                700: '#c2410c',
-                800: '#9a3412',
-                900: '#7c2d12',
-              },
-              // Success - Mint Green
-              success: {
-                50: '#f0fdf4',
-                100: '#dcfce7',
-                200: '#bbf7d0',
-                300: '#86efac',
-                400: '#4ade80',
-                500: '#10B981', // Success color
-                600: '#059669',
-                700: '#047857',
-                800: '#065f46',
-                900: '#064e3b',
-              },
-            },
-            fontFamily: {
-              sans: ['Inter', 'system-ui', 'sans-serif'],
-              display: ['Poppins', 'Inter', 'sans-serif'],
-            },
-          },
-        },
-      }
-    </script>
     <style>
       /* Base Styles */
       * {
@@ -321,6 +239,39 @@
         border: 1px solid rgba(37, 99, 235, 0.2);
       }
 
+      .glass-effect {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      }
+
+      .glass {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+      }
+
+      .glass-indigo {
+        background: rgba(79, 70, 229, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(79, 70, 229, 0.2);
+      }
+
+      /* Card Modern - Clean card design */
+      .card-modern {
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+      }
+
+      .card-modern:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+
       /* Modern Shadows with Friendly Tones */
       .shadow-modern {
         box-shadow: 
@@ -488,6 +439,40 @@
         background: linear-gradient(135deg, #3b82f6 0%, #F97316 100%);
       }
 
+      .gradient-indigo {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      }
+
+      .gradient-purple {
+        background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
+      }
+
+      .gradient-pink {
+        background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);
+      }
+
+      /* Gradient text effects */
+      .gradient-text-indigo {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .gradient-text-purple {
+        background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .gradient-text-pink {
+        background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
       /* Animated gradient background */
       .gradient-animated {
         background: linear-gradient(-45deg, #2563EB, #22C55E, #F97316, #10B981);
@@ -580,6 +565,18 @@
 
       .dark .gradient-primary {
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+      }
+
+      .dark .gradient-indigo {
+        background: linear-gradient(135deg, #3730a3 0%, #4f46e5 100%) !important;
+      }
+
+      .dark .gradient-purple {
+        background: linear-gradient(135deg, #6b21a8 0%, #9333ea 100%) !important;
+      }
+
+      .dark .gradient-pink {
+        background: linear-gradient(135deg, #9d174d 0%, #db2777 100%) !important;
       }
 
       .dark .glass-primary {

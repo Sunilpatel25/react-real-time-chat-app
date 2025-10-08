@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ActivityLog, User } from '../types';
 import { SearchIcon, ClockIcon } from './Icons';
 
@@ -7,16 +7,40 @@ interface ActivityLogProps {
     users: User[];
 }
 
+// Debounce hook for search input
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
+
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
 const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, users }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState<ActivityLog['type'] | 'all'>('all');
     const [dateRange, setDateRange] = useState<'today' | 'yesterday' | 'last7' | 'last30' | 'all'>('all');
     const [showStats, setShowStats] = useState(true);
 
-    const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
+    // Debounce search term to prevent excessive re-renders
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-    // Date range filtering
-    const filterByDateRange = (timestamp: number) => {
+    // Memoize sorted logs to prevent re-sorting on every render
+    const sortedLogs = useMemo(() => 
+        [...logs].sort((a, b) => b.timestamp - a.timestamp),
+        [logs]
+    );
+
+    // Date range filtering - memoized for performance
+    const filterByDateRange = useCallback((timestamp: number) => {
         const now = new Date();
         const logDate = new Date(timestamp);
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -39,18 +63,21 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, users }) => {
             default:
                 return true;
         }
-    };
+    }, [dateRange]);
 
-    const filteredLogs = sortedLogs.filter(log => {
-        const matchesSearch = log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            log.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = filterType === 'all' || log.type === filterType;
-        const matchesDate = filterByDateRange(log.timestamp);
-        return matchesSearch && matchesType && matchesDate;
-    });
+    // Memoize filtered logs to prevent recalculation on every render
+    const filteredLogs = useMemo(() => {
+        return sortedLogs.filter(log => {
+            const matchesSearch = log.userName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                                log.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+            const matchesType = filterType === 'all' || log.type === filterType;
+            const matchesDate = filterByDateRange(log.timestamp);
+            return matchesSearch && matchesType && matchesDate;
+        });
+    }, [sortedLogs, debouncedSearchTerm, filterType, filterByDateRange]);
 
-    // Activity statistics
-    const stats = {
+    // Activity statistics - memoized
+    const stats = useMemo(() => ({
         total: filteredLogs.length,
         login: filteredLogs.filter(l => l.type === 'login').length,
         logout: filteredLogs.filter(l => l.type === 'logout').length,
@@ -58,28 +85,27 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, users }) => {
         conversation: filteredLogs.filter(l => l.type === 'conversation_start').length,
         profile: filteredLogs.filter(l => l.type === 'profile_update').length,
         search: filteredLogs.filter(l => l.type === 'user_search').length,
-        delete: filteredLogs.filter(l => l.type === 'delete_message').length,
-        block: filteredLogs.filter(l => l.type === 'block_user').length,
-        report: filteredLogs.filter(l => l.type === 'report_user').length,
-    };
+    }), [filteredLogs]);
 
-    // Most active users
-    const userActivity = filteredLogs.reduce((acc, log) => {
-        acc[log.userId] = (acc[log.userId] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
+    // Most active users - memoized
+    const topUsers = useMemo(() => {
+        const userActivity = filteredLogs.reduce((acc, log) => {
+            acc[log.userId] = (acc[log.userId] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
 
-    const topUsers = Object.entries(userActivity)
-        .sort(([, countA], [, countB]) => (countB as number) - (countA as number))
-        .slice(0, 5)
-        .map(([userId, count]) => ({
-            userId,
-            userName: logs.find(l => l.userId === userId)?.userName || 'Unknown',
-            count
-        }));
+        return Object.entries(userActivity)
+            .sort(([, countA], [, countB]) => (countB as number) - (countA as number))
+            .slice(0, 5)
+            .map(([userId, count]) => ({
+                userId,
+                userName: logs.find(l => l.userId === userId)?.userName || 'Unknown',
+                count
+            }));
+    }, [filteredLogs, logs]);
 
-    // Export functionality
-    const exportActivityLog = () => {
+    // Export functionality - memoized callback
+    const exportActivityLog = useCallback(() => {
         const csvHeader = 'Timestamp,User,Activity Type,Description,Metadata\n';
         const csvRows = filteredLogs.map(log => {
             const timestamp = new Date(log.timestamp).toISOString();
@@ -97,7 +123,178 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, users }) => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-    };
+    }, [filteredLogs]);
+
+    // Flatten logs for virtual list - memoized
+    const flattenedLogs = useMemo(() => {
+        const result: Array<{ type: 'date' | 'log', date?: string, log?: ActivityLog, count?: number }> = [];
+        const groupedLogs = filteredLogs.reduce((groups, log) => {
+            const date = new Date(log.timestamp).toLocaleDateString();
+            if (!groups[date]) {
+                groups[date] = [];
+            }
+            groups[date].push(log);
+            return groups;
+        }, {} as Record<string, ActivityLog[]>);
+
+        Object.entries(groupedLogs).forEach(([date, dayLogs]) => {
+            result.push({ type: 'date', date, count: dayLogs.length });
+            dayLogs.forEach(log => {
+                result.push({ type: 'log', log });
+            });
+        });
+        
+        return result;
+    }, [filteredLogs]);
+
+    // Simple virtualization: only render visible items + buffer
+    const ITEMS_PER_PAGE = 20;
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Load more items when scrolling near bottom
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+            
+            // Load more when scrolled 80% down
+            if (scrollPercentage > 0.8 && visibleCount < flattenedLogs.length) {
+                setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, flattenedLogs.length));
+            }
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [visibleCount, flattenedLogs.length]);
+
+    // Reset visible count when filters change
+    useEffect(() => {
+        setVisibleCount(ITEMS_PER_PAGE);
+    }, [debouncedSearchTerm, filterType, dateRange]);
+
+    // Get visible logs
+    const visibleLogs = useMemo(() => 
+        flattenedLogs.slice(0, visibleCount),
+        [flattenedLogs, visibleCount]
+    );
+
+    // Render a single log row - memoized
+    const renderLogRow = useCallback((item: typeof flattenedLogs[0], index: number) => {
+        
+        if (item.type === 'date') {
+            return (
+                <div key={`date-${item.date}`} className="px-4 py-2">
+                    <div className="flex items-center gap-3">
+                        <div className="px-5 py-2.5 glass-indigo rounded-xl shadow-modern border border-indigo-200/50">
+                            <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-indigo-900">{item.date}</p>
+                                <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">
+                                    {item.count}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex-1 h-px bg-gradient-to-r from-indigo-300 via-purple-300 to-transparent"></div>
+                    </div>
+                </div>
+            );
+        }
+
+        const log = item.log!;
+        const colors = getActivityColor(log.type);
+        const time = formatTimestamp(log.timestamp);
+        const isRecent = new Date().getTime() - log.timestamp < 300000; // 5 minutes
+
+        return (
+            <div key={log.id} className="px-4 py-1 relative pl-12">
+                {/* Timeline Dot */}
+                <div className={`absolute left-10 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full ${colors.icon} border-2 border-white shadow-lg ${isRecent ? 'animate-pulse' : ''}`}></div>
+
+                <div className={`glass rounded-xl p-4 border ${colors.border} shadow-modern hover:shadow-modern-lg transition-all duration-200 hover:scale-[1.01] group relative`}>
+                    {/* Recent Activity Indicator */}
+                    {isRecent && (
+                        <div className="absolute top-2 right-2">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex items-start gap-4">
+                        {/* Avatar with Online Status */}
+                        <div className="relative flex-shrink-0">
+                            <img
+                                src={log.userAvatar}
+                                alt={log.userName}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 ring-4 ring-indigo-50 group-hover:ring-indigo-100 transition-all"
+                            />
+                            {isRecent && (
+                                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
+                            )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold text-cool-900">
+                                        <span className="text-indigo-700">{log.userName}</span>
+                                        <span className="font-normal text-cool-600 ml-1">{log.description}</span>
+                                    </p>
+                                    {log.metadata?.recipientName && (
+                                        <p className="text-xs text-cool-500 mt-1 flex items-center gap-1">
+                                            💬 with <span className="font-semibold text-cool-700">{log.metadata.recipientName}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                <div className={`p-2.5 rounded-lg ${colors.icon} flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform`}>
+                                    {getActivityIcon(log.type)}
+                                </div>
+                            </div>
+
+                            {/* Activity Meta Info */}
+                            <div className="flex items-center gap-3 text-xs text-cool-500 flex-wrap">
+                                <span className="flex items-center gap-1 font-medium">
+                                    <ClockIcon className="w-3.5 h-3.5" />
+                                    <span title={time.fullDate} className="text-cool-600">
+                                        {time.timeAgo}
+                                    </span>
+                                </span>
+                                <span className="text-cool-300">•</span>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${activityTypes.find(t => t.value === log.type)?.color} shadow-sm`}>
+                                    {log.type.replace('_', ' ').toUpperCase()}
+                                </span>
+                                {log.metadata?.conversationId && (
+                                    <>
+                                        <span className="text-cool-300">•</span>
+                                        <span className="font-mono text-cool-500 bg-cool-100 px-2 py-0.5 rounded">
+                                            ID: {log.metadata.conversationId.slice(0, 8)}
+                                        </span>
+                                    </>
+                                )}
+                                {isRecent && (
+                                    <>
+                                        <span className="text-cool-300">•</span>
+                                        <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                            LIVE
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }, []);
 
     const activityTypes: { value: ActivityLog['type'] | 'all'; label: string; color: string }[] = [
         { value: 'all', label: 'All', color: 'bg-cool-100 text-cool-700' },
@@ -330,134 +527,31 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, users }) => {
                 </div>
             </div>
 
-            {/* Activity Timeline */}
-            <div className="space-y-6">
-                {Object.keys(groupedLogs).length === 0 ? (
+            {/* Activity Timeline with Infinite Scroll */}
+            <div 
+                ref={containerRef}
+                className="relative max-h-[800px] overflow-y-auto custom-scrollbar"
+            >
+                {/* Timeline Line */}
+                <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-300 via-purple-300 to-pink-300 z-0"></div>
+
+                {flattenedLogs.length === 0 ? (
                     <div className="glass rounded-2xl p-12 text-center border border-indigo-100/50 shadow-modern">
                         <ClockIcon className="w-16 h-16 mx-auto mb-4 text-cool-400 opacity-50" />
                         <p className="text-lg font-bold text-cool-700 mb-2">No activities found</p>
                         <p className="text-sm text-cool-500">Try adjusting your search, date range, or filters</p>
                     </div>
                 ) : (
-                    Object.entries(groupedLogs).map(([date, dayLogs], dayIndex) => (
-                        <div key={date} className="space-y-3 animate-slideUp" style={{ animationDelay: `${dayIndex * 0.1}s` }}>
-                            {/* Date Header with Activity Count */}
-                            <div className="flex items-center gap-3">
-                                <div className="px-5 py-2.5 glass-indigo rounded-xl shadow-modern border border-indigo-200/50">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-sm font-bold text-indigo-900">{date}</p>
-                                        <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">
-                                            {(dayLogs as ActivityLog[]).length}
-                                        </span>
-                                    </div>
+                    <div className="space-y-2">
+                        {visibleLogs.map((item, index) => renderLogRow(item, index))}
+                        {visibleCount < flattenedLogs.length && (
+                            <div className="text-center py-4">
+                                <div className="inline-block px-6 py-3 bg-indigo-100 text-indigo-700 rounded-lg font-semibold text-sm animate-pulse">
+                                    Loading {flattenedLogs.length - visibleCount} more...
                                 </div>
-                                <div className="flex-1 h-px bg-gradient-to-r from-indigo-300 via-purple-300 to-transparent"></div>
                             </div>
-
-                            {/* Activities with Timeline */}
-                            <div className="relative space-y-3 pl-8">
-                                {/* Timeline Line */}
-                                <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-300 via-purple-300 to-pink-300"></div>
-
-                                {(dayLogs as ActivityLog[]).map((log, index) => {
-                                    const colors = getActivityColor(log.type);
-                                    const time = formatTimestamp(log.timestamp);
-                                    const isRecent = new Date().getTime() - log.timestamp < 300000; // 5 minutes
-
-                                    return (
-                                        <div
-                                            key={log.id}
-                                            className="relative animate-slideInRight"
-                                            style={{ animationDelay: `${index * 0.05}s` }}
-                                        >
-                                            {/* Timeline Dot */}
-                                            <div className={`absolute -left-[26px] top-6 w-3 h-3 rounded-full ${colors.icon} border-2 border-white shadow-lg ${isRecent ? 'animate-pulse' : ''}`}></div>
-
-                                            <div className={`glass rounded-xl p-4 border ${colors.border} shadow-modern hover:shadow-modern-lg transition-all duration-300 hover:scale-[1.01] hover:-translate-y-1 group relative overflow-hidden`}>
-                                                {/* Recent Activity Indicator */}
-                                                {isRecent && (
-                                                    <div className="absolute top-2 right-2">
-                                                        <span className="relative flex h-3 w-3">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex items-start gap-4">
-                                                    {/* Avatar with Online Status */}
-                                                    <div className="relative flex-shrink-0">
-                                                        <img
-                                                            src={log.userAvatar}
-                                                            alt={log.userName}
-                                                            className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 ring-4 ring-indigo-50 group-hover:ring-indigo-100 transition-all"
-                                                        />
-                                                        {isRecent && (
-                                                            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Content */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-semibold text-cool-900">
-                                                                    <span className="text-indigo-700">{log.userName}</span>
-                                                                    <span className="font-normal text-cool-600 ml-1">{log.description}</span>
-                                                                </p>
-                                                                {log.metadata?.recipientName && (
-                                                                    <p className="text-xs text-cool-500 mt-1 flex items-center gap-1">
-                                                                        💬 with <span className="font-semibold text-cool-700">{log.metadata.recipientName}</span>
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <div className={`p-2.5 rounded-lg ${colors.icon} flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform`}>
-                                                                {getActivityIcon(log.type)}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Activity Meta Info */}
-                                                        <div className="flex items-center gap-3 text-xs text-cool-500 flex-wrap">
-                                                            <span className="flex items-center gap-1 font-medium">
-                                                                <ClockIcon className="w-3.5 h-3.5" />
-                                                                <span title={time.fullDate} className="text-cool-600">
-                                                                    {time.timeAgo}
-                                                                </span>
-                                                            </span>
-                                                            <span className="text-cool-300">•</span>
-                                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${activityTypes.find(t => t.value === log.type)?.color} shadow-sm`}>
-                                                                {log.type.replace('_', ' ').toUpperCase()}
-                                                            </span>
-                                                            {log.metadata?.conversationId && (
-                                                                <>
-                                                                    <span className="text-cool-300">•</span>
-                                                                    <span className="font-mono text-cool-500 bg-cool-100 px-2 py-0.5 rounded">
-                                                                        ID: {log.metadata.conversationId.slice(0, 8)}
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                            {isRecent && (
-                                                                <>
-                                                                    <span className="text-cool-300">•</span>
-                                                                    <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-                                                                        <span className="relative flex h-2 w-2">
-                                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                                        </span>
-                                                                        LIVE
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))
+                        )}
+                    </div>
                 )}
             </div>
         </div>

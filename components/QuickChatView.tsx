@@ -10,9 +10,9 @@ interface QuickChatViewProps {
 }
 
 const QuickChatView: React.FC<QuickChatViewProps> = ({
-    conversations,
-    messages,
-    users,
+    conversations = [],
+    messages = [],
+    users = [],
     onViewFullChat
 }) => {
     const getUserById = (userId: string) => {
@@ -23,14 +23,15 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
         return conv.members.map(id => getUserById(id)).filter(u => u !== undefined) as User[];
     };
 
-    // Quick stats for lightweight display
     const quickStats = useMemo(() => {
+
         const now = Date.now();
         const todayStart = new Date().setHours(0, 0, 0, 0);
         const lastHour = now - (60 * 60 * 1000);
 
         const messagesToday = messages.filter(m => m.timestamp >= todayStart).length;
         const messagesLastHour = messages.filter(m => m.timestamp >= lastHour).length;
+
         const activeConversations = conversations.filter(conv => {
             const convMessages = messages.filter(m => m.conversationId === conv.id);
             const lastMessage = convMessages.length > 0 ? convMessages[convMessages.length - 1] : null;
@@ -53,7 +54,7 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
         const now = Date.now();
         const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
 
-        return conversations
+        const result = conversations
             .map(conv => {
                 const participants = getConversationParticipants(conv);
                 const convMessages = messages.filter(m => m.conversationId === conv.id);
@@ -72,6 +73,8 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
             .filter(item => item.lastMessage) // Only show conversations with messages
             .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
             .slice(0, 5); // Show only top 5 recent
+
+        return result;
     }, [conversations, messages, users]);
 
     const formatTime = (timestamp: number) => {
@@ -88,6 +91,7 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
 
     return (
         <div className="space-y-4">
+
             {/* Quick Stats Header */}
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100/50">
                 <div className="flex items-center justify-between mb-3">
@@ -130,14 +134,15 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-indigo-100/50 shadow-modern">
                 <h4 className="text-md font-semibold text-cool-800 mb-3 flex items-center gap-2">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                    Recent Activity
+                    Recent Activity ({recentConversations.length})
                 </h4>
 
                 <div className="space-y-2">
                     {recentConversations.length === 0 ? (
-                        <div className="text-center py-4 text-cool-500">
+                        <div className="text-center py-6 text-cool-500">
                             <ChatBubbleIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
                             <p className="text-sm">No recent conversations</p>
+                            <p className="text-xs mt-1">Messages will appear here as they come in</p>
                         </div>
                     ) : (
                         recentConversations.map((item) => (
@@ -150,9 +155,13 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
                                     {item.participants.slice(0, 2).map((user) => (
                                         <img
                                             key={user.id}
-                                            src={user.avatar}
+                                            src={user.avatar || '/default-avatar.png'}
                                             alt={user.name}
                                             className="w-6 h-6 rounded-full border border-white"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = '/default-avatar.png';
+                                            }}
                                         />
                                     ))}
                                     {item.participants.length > 2 && (
@@ -167,11 +176,11 @@ const QuickChatView: React.FC<QuickChatViewProps> = ({
                                 {/* Conversation Info */}
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-cool-800 truncate">
-                                        {item.participants.map(u => u.name).join(', ')}
+                                        {item.participants.map(u => u.name).join(', ') || 'Unknown Users'}
                                     </p>
                                     {item.lastMessage && (
                                         <p className="text-xs text-cool-600 truncate">
-                                            {item.lastMessage.image ? '📷 Image' : item.lastMessage.text}
+                                            {item.lastMessage.image ? '📷 Image' : (item.lastMessage.text || 'No message text')}
                                         </p>
                                     )}
                                 </div>

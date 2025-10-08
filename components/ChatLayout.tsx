@@ -15,6 +15,10 @@ interface ChatLayoutProps {
     onLogout: () => void;
     onStartNewConversation: (user: User) => void;
     onUpdateProfile: (data: { name: string; avatar: string }) => void;
+    onClearActiveConversation?: () => void;
+    onViewProfile?: (user: User) => void;
+    onBlockUser?: (user: User) => void;
+    onReportUser?: (user: User) => void;
     isTyping: boolean;
     onTyping: (action: 'start' | 'stop') => void;
     socket?: React.MutableRefObject<any>;
@@ -30,6 +34,10 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
     onLogout,
     onStartNewConversation,
     onUpdateProfile,
+    onClearActiveConversation,
+    onViewProfile,
+    onBlockUser,
+    onReportUser,
     isTyping,
     onTyping,
     socket,
@@ -107,6 +115,10 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({
                             messages={messages}
                             onSendMessage={onSendMessage}
                             onBack={() => setShowChatOnMobile(false)}
+                            onBackToDashboard={onClearActiveConversation}
+                            onViewProfile={onViewProfile}
+                            onBlockUser={onBlockUser}
+                            onReportUser={onReportUser}
                             isTyping={isTyping}
                             onTyping={onTyping}
                             socket={socket}

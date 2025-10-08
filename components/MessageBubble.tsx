@@ -70,4 +70,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSender }) => {
     );
 };
 
-export default MessageBubble;
+// Custom comparison function to prevent unnecessary re-renders
+// Only re-render if message content, status, or admin flags change
+const arePropsEqual = (prevProps: MessageBubbleProps, nextProps: MessageBubbleProps) => {
+    return (
+        prevProps.message.id === nextProps.message.id &&
+        prevProps.message.text === nextProps.message.text &&
+        prevProps.message.image === nextProps.message.image &&
+        prevProps.message.status === nextProps.message.status &&
+        prevProps.message.isEdited === nextProps.message.isEdited &&
+        prevProps.message.isFlagged === nextProps.message.isFlagged &&
+        prevProps.isSender === nextProps.isSender
+    );
+};
+
+export default React.memo(MessageBubble, arePropsEqual);

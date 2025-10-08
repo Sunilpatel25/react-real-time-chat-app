@@ -75,4 +75,18 @@ const ConversationListItem: React.FC<ConversationListItemProps> = ({ conversatio
     );
 };
 
-export default ConversationListItem;
+// Custom comparison function to prevent unnecessary re-renders
+// Only re-render if conversation ID, active state, last message, or online status changes
+const arePropsEqual = (prevProps: ConversationListItemProps, nextProps: ConversationListItemProps) => {
+    return (
+        prevProps.conversation.id === nextProps.conversation.id &&
+        prevProps.isActive === nextProps.isActive &&
+        prevProps.conversation.lastMessage?.id === nextProps.conversation.lastMessage?.id &&
+        prevProps.conversation.lastMessage?.text === nextProps.conversation.lastMessage?.text &&
+        prevProps.conversation.lastMessage?.status === nextProps.conversation.lastMessage?.status &&
+        prevProps.conversation.otherUser?.isOnline === nextProps.conversation.otherUser?.isOnline &&
+        prevProps.onSelect === nextProps.onSelect
+    );
+};
+
+export default React.memo(ConversationListItem, arePropsEqual);

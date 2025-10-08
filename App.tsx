@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { User, Conversation, Message, ActivityLog } from './types';
 import * as api from './services/mockApi';
 import { SOCKET_URL } from './config';
 import LoginScreen from './components/LoginScreen';
 import ChatLayout from './components/ChatLayout';
-import AdminDashboard from './components/AdminDashboard';
 import AdminSetup from './components/AdminSetup';
 import { generateMockActivityLogs, enhanceUsersForAdmin, enhanceConversationsForAdmin } from './services/adminMockData';
+
+// Lazy load heavy admin components to reduce initial bundle size
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const ChatMonitor = lazy(() => import('./components/ChatMonitor'));
 
 // Assuming io is globally available from the script tag in index.html
 declare const io: any;
@@ -66,12 +69,89 @@ const App: React.FC = () => {
 
     }, [user]);
 
+    const handleViewProfile = useCallback((user: User) => {
+        // For now, just show an alert. In a real app, this would open a profile modal
+        alert(`Viewing profile for ${user.name} (ID: ${user.id})`);
+    }, []);
+
+    const handleBlockUser = useCallback((user: User) => {
+        // For now, just show a confirmation. In a real app, this would block the user
+        if (window.confirm(`Are you sure you want to block ${user.name}?`)) {
+            alert(`${user.name} has been blocked`);
+        }
+    }, []);
+
+    const handleReportUser = useCallback((user: User) => {
+        // For now, just show a confirmation. In a real app, this would report the user
+        if (window.confirm(`Are you sure you want to report ${user.name} for inappropriate behavior?`)) {
+            alert(`${user.name} has been reported`);
+        }
+    }, []);
+
     // Effect for Socket Connection and general listeners
     useEffect(() => {
         if (user) {
-            // Connect to the backend server, which now also hosts the socket server
-            socket.current = io(SOCKET_URL);
-            socket.current.emit('addUser', user.id);
+            // Connect to the backend server with proper configuration
+            socket.current = io(SOCKET_URL, {
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000,
+            });
+            
+            // Connection success handler
+            socket.current.on('connect', () => {
+                console.log('Socket connected with ID:', socket.current?.id);
+                socket.current?.emit('addUser', user.id);
+            });
+            
+            // Connection error handler
+            socket.current.on('connect_error', (error) => {
+                console.error('Socket connection error:', error.message);
+                // Show user-friendly error message
+                if (error.message === 'Authentication failed') {
+                    console.error('Socket authentication failed. Please log in again.');
+                }
+            });
+            
+            // Disconnect handler with reason
+            socket.current.on('disconnect', (reason, details) => {
+                console.log('Socket disconnected:', reason);
+                if (reason === 'io server disconnect') {
+                    // Server forcefully disconnected, try to reconnect
+                    socket.current?.connect();
+                }
+            });
+            
+            // Reconnection handlers
+            socket.current.on('reconnect', (attemptNumber) => {
+                console.log(`Socket reconnected after ${attemptNumber} attempts`);
+                socket.current?.emit('addUser', user.id);
+            });
+            
+            socket.current.on('reconnect_attempt', (attemptNumber) => {
+                console.log(`Reconnection attempt ${attemptNumber}`);
+            });
+            
+            socket.current.on('reconnect_error', (error) => {
+                console.error('Socket reconnection error:', error);
+            });
+            
+            socket.current.on('reconnect_failed', () => {
+                console.error('Socket failed to reconnect after all attempts');
+                alert('Unable to connect to chat server. Please refresh the page.');
+            });
+            
+            // Monitor transport upgrades
+            socket.current.on('connect', () => {
+                const transport = socket.current?.io.engine.transport.name;
+                console.log('Current transport:', transport);
+                
+                socket.current?.io.engine.on('upgrade', (newTransport) => {
+                    console.log('Transport upgraded to:', newTransport.name);
+                });
+            });
             
             socket.current.on('getUsers', (users: {userId: string}[]) => {
                 setOnlineUsers(users.map(u => u.userId));
@@ -337,13 +417,27 @@ const App: React.FC = () => {
             status: 'sent',
         };
 
-        // Emit message via socket. The backend will handle saving it and broadcasting.
+        // Emit message via socket with acknowledgment
         socket.current.emit('sendMessage', {
             senderId: user.id,
             receiverId: receiverId,
             text: payload.text,
             image: payload.image,
             conversationId: activeConversation.id,
+        }, (response: { success: boolean; message?: Message; error?: string }) => {
+            if (!response.success) {
+                console.error('Failed to send message:', response.error);
+                // Revert optimistic update on failure
+                setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+                alert(`Failed to send message: ${response.error || 'Unknown error'}`);
+            } else {
+                // Update the temporary message with the server-saved message
+                if (response.message) {
+                    setMessages(prev => prev.map(msg => 
+                        msg.id === tempMessage.id ? response.message! : msg
+                    ));
+                }
+            }
         });
 
         // Optimistic UI update
@@ -475,18 +569,27 @@ const App: React.FC = () => {
     // Show Admin Dashboard if user is admin and toggle is on
     if (user.role === 'admin' && showAdminDashboard) {
         return (
-            <AdminDashboard
-                currentUser={user}
-                allUsers={allUsers}
-                allConversations={allConversations}
-                allMessages={allMessages}
-                activityLogs={activityLogs}
-                onLogout={() => {
-                    handleLogout();
-                    setShowAdminDashboard(false);
-                }}
-                onRefreshData={fetchAdminData}
-            />
+            <Suspense fallback={
+                <div className="flex items-center justify-center h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+                    <div className="text-center">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
+                        <div className="text-xl font-semibold text-indigo-700">Loading Admin Dashboard...</div>
+                    </div>
+                </div>
+            }>
+                <AdminDashboard
+                    currentUser={user}
+                    allUsers={allUsers}
+                    allConversations={allConversations}
+                    allMessages={allMessages}
+                    activityLogs={activityLogs}
+                    onLogout={() => {
+                        handleLogout();
+                        setShowAdminDashboard(false);
+                    }}
+                    onRefreshData={fetchAdminData}
+                />
+            </Suspense>
         );
     }
 
@@ -516,6 +619,10 @@ const App: React.FC = () => {
                 onLogout={handleLogout}
                 onStartNewConversation={handleStartNewConversation}
                 onUpdateProfile={handleUpdateProfile}
+                onClearActiveConversation={() => setActiveConversation(null)}
+                onViewProfile={handleViewProfile}
+                onBlockUser={handleBlockUser}
+                onReportUser={handleReportUser}
                 isTyping={activeConversation ? typingConversations.has(activeConversation.id) : false}
                 onTyping={handleTyping}
                 socket={socket}

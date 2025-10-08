@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Conversation, User, Message } from '../types';
 import MessageBubble from './MessageBubble';
 import { SendIcon, MoreVertIcon, BackArrowIcon, PaperclipIcon } from './Icons';
@@ -10,12 +10,16 @@ interface ChatWindowProps {
     messages: Message[];
     onSendMessage: (payload: { text: string; image?: string }) => void;
     onBack: () => void;
+    onBackToDashboard?: () => void;
+    onViewProfile?: (user: User) => void;
+    onBlockUser?: (user: User) => void;
+    onReportUser?: (user: User) => void;
     isTyping: boolean;
     onTyping: (action: 'start' | 'stop') => void;
     socket?: React.MutableRefObject<any>;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser, messages, onSendMessage, onBack, isTyping, onTyping, socket }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser, messages, onSendMessage, onBack, onBackToDashboard, onViewProfile, onBlockUser, onReportUser, isTyping, onTyping, socket }) => {
     const [inputText, setInputText] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -24,6 +28,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser
     const [editText, setEditText] = useState('');
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [contextMenu, setContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
+    const [showSearch, setShowSearch] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const typingTimeoutRef = useRef<number | null>(null);
@@ -33,6 +40,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser
     
     // Check if current user is admin
     const isAdmin = currentUser.role === 'admin';
+
+    // Filter messages based on search term
+    const filteredMessages = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return messages;
+        }
+        return messages.filter(message =>
+            message.text.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [messages, searchTerm]);
 
     const handleTypingEvent = useCallback((action: 'start' | 'stop') => {
         if (action === 'start' && !isTypingRef.current) {
@@ -258,6 +275,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser
                         <BackArrowIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" />
                     </button>
                     
+                    {/* Back to Dashboard Button */}
+                    {onBackToDashboard && (
+                        <button 
+                            onClick={onBackToDashboard} 
+                            className="mr-1 p-2.5 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 transition-all duration-300 active:scale-95 flex-shrink-0 group"
+                            title="Back to Dashboard"
+                        >
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                    )}
+                    
                     {/* Avatar with animated ring */}
                     <div className="relative flex-shrink-0">
                         <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full opacity-75 blur-sm group-hover:opacity-100 transition-opacity"></div>
@@ -278,6 +308,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                             <p className="text-base sm:text-lg font-bold text-gray-900 truncate">{otherUser.name}</p>
+                            <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-0.5 rounded">
+                                ID: {otherUser.id}
+                            </span>
                             {isAdmin && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md">
                                     <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -332,18 +365,140 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser
                         </>
                     ) : (
                         <>
-                            <button className="p-2.5 text-gray-600 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-110 active:scale-95">
+                            <button 
+                                onClick={() => setShowSearch(!showSearch)}
+                                className="p-2.5 text-gray-600 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-110 active:scale-95"
+                                title="Search messages"
+                            >
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </button>
-                            <button className="p-2.5 text-gray-600 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-110 active:scale-95">
-                                <MoreVertIcon className="w-5 h-5" />
-                            </button>
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setShowMenu(!showMenu)}
+                                    className="p-2.5 text-gray-600 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-600 transition-all duration-300 hover:scale-110 active:scale-95"
+                                    title="More options"
+                                >
+                                    <MoreVertIcon className="w-5 h-5" />
+                                </button>
+
+                                {/* Menu Dropdown */}
+                                {showMenu && (
+                                    <>
+                                        <div 
+                                            className="fixed inset-0 z-10" 
+                                            onClick={() => setShowMenu(false)}
+                                        />
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-20 animate-scaleIn">
+                                            <button
+                                                onClick={() => {
+                                                    setShowMenu(false);
+                                                    onViewProfile?.(otherUser);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-indigo-50 transition-colors duration-200 group"
+                                            >
+                                                <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
+                                                    <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-semibold text-gray-800">View Profile</p>
+                                                    <p className="text-xs text-gray-500">See user details</p>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setShowMenu(false);
+                                                    onBlockUser?.(otherUser);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 transition-colors duration-200 group"
+                                            >
+                                                <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+                                                    <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-12.728 12.728m0-12.728l12.728 12.728" />
+                                                    </svg>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-semibold text-red-600">Block User</p>
+                                                    <p className="text-xs text-red-400">Stop receiving messages</p>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setShowMenu(false);
+                                                    onReportUser?.(otherUser);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50 transition-colors duration-200 group"
+                                            >
+                                                <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
+                                                    <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-semibold text-orange-600">Report User</p>
+                                                    <p className="text-xs text-orange-400">Report inappropriate behavior</p>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </>
                     )}
                 </div>
             </div>
+
+            {/* Search Bar */}
+            {showSearch && (
+                <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-4 py-3">
+                    <div className="relative max-w-md mx-auto">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search messages..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full py-2 pl-10 pr-4 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            autoFocus
+                        />
+                        <button
+                            onClick={() => {
+                                setShowSearch(false);
+                                setSearchTerm('');
+                            }}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Search Results Indicator */}
+            {showSearch && searchTerm && (
+                <div className="bg-indigo-50/80 backdrop-blur-sm border-b border-indigo-200/50 px-4 py-2">
+                    <div className="text-center">
+                        <p className="text-sm text-indigo-700 font-medium">
+                            Found {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''} 
+                            {filteredMessages.length !== messages.length && ` (showing ${filteredMessages.length} of ${messages.length})`}
+                        </p>
+                        {filteredMessages.length === 0 && (
+                            <p className="text-xs text-indigo-600 mt-1">No messages match your search</p>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Messages Area with Enhanced Background */}
             <div className="relative flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar">
@@ -353,7 +508,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ activeConversation, currentUser
                 
                 {/* Messages */}
                 <div className="relative space-y-3 sm:space-y-4">
-                    {messages.map((msg) => {
+                    {filteredMessages.map((msg) => {
                         const isSelected = selectedMessages.has(msg.id);
                         const isEditing = editingMessageId === msg.id;
                         const isSender = msg.senderId === currentUser.id;

@@ -16,11 +16,27 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
     const response = await fetch(`${API_BASE_URL}${url}`, { ...options, headers });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
-        throw new Error(errorData.message || 'API request failed');
+        // Check content-type before parsing as JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
+            throw new Error(errorData.message || 'API request failed');
+        } else {
+            // Response is not JSON (e.g., HTML error page)
+            const textError = await response.text();
+            console.error('Non-JSON error response:', textError);
+            throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+        }
     }
 
-    return response.json();
+    // Check content-type for successful response too
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        return response.json();
+    } else {
+        console.warn('Response is not JSON:', contentType);
+        return {};
+    }
 };
 
 export const setToken = (token: string) => {

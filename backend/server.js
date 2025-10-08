@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const compression = require('compression');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
@@ -36,6 +37,7 @@ const io = new Server(server, {
 });
 
 // Middleware
+app.use(compression()); // Enable gzip/brotli compression for all responses
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Increase limit to handle base64 images
 
@@ -45,6 +47,42 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Global error handling middleware for Mongoose validation errors
+app.use((err, req, res, next) => {
+    // Mongoose validation error
+    if (err.name === 'ValidationError') {
+        const errors = Object.values(err.errors).map(e => e.message);
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors
+        });
+    }
+    
+    // Mongoose cast error (invalid ObjectId, etc.)
+    if (err.name === 'CastError') {
+        return res.status(400).json({
+            message: `Invalid ${err.path}: ${err.value}`,
+            error: err.message
+        });
+    }
+    
+    // MongoDB duplicate key error
+    if (err.name === 'MongoServerError' && err.code === 11000) {
+        const field = Object.keys(err.keyPattern)[0];
+        return res.status(409).json({
+            message: `A record with this ${field} already exists`,
+            error: 'Duplicate key error'
+        });
+    }
+    
+    // Default error
+    console.error('Unhandled error:', err);
+    res.status(500).json({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
 
 
 // Socket.IO Connection
@@ -71,8 +109,8 @@ io.on('connection', (socket) => {
         io.emit('getUsers', users);
     });
 
-    // Send and get message
-    socket.on('sendMessage', async ({ senderId, receiverId, text, conversationId, image }) => {
+    // Send and get message with acknowledgment
+    socket.on('sendMessage', async ({ senderId, receiverId, text, conversationId, image }, callback) => {
         try {
             const newMessage = new Message({
                 senderId,
@@ -94,8 +132,20 @@ io.on('connection', (socket) => {
                      id: savedMessage._id, // ensure id is present
                 });
             }
+            
+            // Send acknowledgment to sender
+            if (callback && typeof callback === 'function') {
+                callback({ success: true, message: savedMessage });
+            }
         } catch (error) {
             console.error('Error saving message:', error);
+            // Send error acknowledgment
+            if (callback && typeof callback === 'function') {
+                callback({ 
+                    success: false, 
+                    error: error.message || 'Failed to send message' 
+                });
+            }
         }
     });
     
@@ -220,14 +270,39 @@ io.on('connection', (socket) => {
 });
 
 
-// MongoDB Connection
+// MongoDB Connection with proper error handling
 const PORT = process.env.PORT || 8900;
-mongoose.connect(process.env.MONGO_URI)
+
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    maxPoolSize: 10, // Connection pool size
+})
     .then(() => {
         console.log('Connected to MongoDB Atlas');
         server.listen(PORT, () => console.log(`Server running on port http://localhost:${PORT}`));
     })
     .catch((err) => {
         console.error('Failed to connect to MongoDB', err);
+        console.error('Error reason:', err.reason);
         process.exit(1);
     });
+
+// Handle errors after initial connection
+mongoose.connection.on('error', (err) => {
+    console.error('MongoDB connection error after initial connection:', err);
+});
+
+// Handle disconnection
+mongoose.connection.on('disconnected', () => {
+    console.warn('MongoDB disconnected. Attempting to reconnect...');
+});
+
+// Handle reconnection
+mongoose.connection.on('reconnected', () => {
+    console.log('MongoDB reconnected successfully');
+});
+
+// Handle connection timeout
+mongoose.connection.on('timeout', () => {
+    console.error('MongoDB connection timeout');
+});
